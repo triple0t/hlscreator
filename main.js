@@ -1,5 +1,5 @@
 
-module.exports = (source, target) => {
+module.exports = (source, target, fileinfo) => {
     const renditions = [
         {
             resolution: "768x432",
@@ -33,10 +33,12 @@ module.exports = (source, target) => {
     const rate_monitor_buffer_ratio=1.5;     
     
     // for only this video
-    const frame_rate = 24;
+    const frame_rate = fileinfo['video_frame_rate'] || 24;
     const key_frames_interval = frame_rate * 2;
-    const video_codec = 'h264'; // can be h264
-    const audio_codec = 'aac' ;
+    const video_codec = fileinfo['video_codec_name'] || 'h264';
+    const video_codec_tag = fileinfo['video_codec_tag_string'] || 'avc1';
+    const audio_codec = fileinfo['audio_codec_name'] || 'aac' ;
+    const audio_codec_tag = fileinfo['audio_codec_tag_string'] || 'mp4a' ;
 
     const misc_params = '-hide_banner -y';
     
