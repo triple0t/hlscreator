@@ -1,15 +1,21 @@
 # HLS Stream Creator
 
 ## Starting the script
-Start script with `node index.js tos-teaser.mp4`
+Start script with: `node index.js file=tos-teaser.mp4`
 
-or add the destination foldername
+**Setting a Bundle Name**
+Add the destination foldername
 
-`node index.js tos-teaser.mp4 teaser`
+`node index.js file=tos-teaser.mp4 name=teaser`
 
-or with npm
+**Using Custom Segment Duration**
+`node index.js file=tos-teaser.mp4 name=teaser segment_duration=10`
 
-`npm start -- tos-teaser.mp4 teaser`
+**Using NPM**
+With npm
+
+`npm start -- file=tos-teaser.mp4 name=teaser`
+
 
 ## Output
 Output will be in the format:
@@ -25,6 +31,8 @@ Output will be in the format:
 * Master manifest include: Average bandwidth, max bandwidth, codecs (A/V), resolution, and frame-rate
 * Script bundle created assets together
 * Multiple bitrate assets with 5 renditions, top bitrate being 6000k, bottom bitrate being 1100k.
+* Audio file added to master manifest
+* Ability to set custom segment duration
 
 
 

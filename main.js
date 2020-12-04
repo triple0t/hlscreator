@@ -1,44 +1,21 @@
+const {getFullCodec} = require('./audio_video_format');
+const {renditions} = require('./renditions');
 
-module.exports = (source, target, fileinfo) => {
-    const renditions = [
-        {
-            resolution: "768x432",
-            bitrate: "1100",
-            audiorate: "128"
-        },
-        {
-            resolution: "960x540",
-            bitrate: "2000",
-            audiorate: "128"
-        },
-        {
-            resolution: "1280x720",
-            bitrate: "3000",
-            audiorate: "128"
-        },
-        {
-            resolution: "1280x720",
-            bitrate: "4500",
-            audiorate: "192"
-        },
-        {
-            resolution: "1920x1080",
-            bitrate: "6000",
-            audiorate: "192"
-        },
-    ];
-    
-    const each_segment_duration = 6;
+module.exports = (properties) => {
+    const {source, target, segment_duration, fileinfo} = properties;
+
+    const each_segment_duration = segment_duration || 6;
     const max_bitrate_ratio=1.07;
     const rate_monitor_buffer_ratio=1.5;     
     
-    // for only this video
-    const frame_rate = fileinfo['video_frame_rate'] || 24;
+    // current video info
+    const frame_rate = fileinfo.video['frame_rate'] || 24;
     const key_frames_interval = frame_rate * 2;
-    const video_codec = fileinfo['video_codec_name'] || 'h264';
-    const video_codec_tag = fileinfo['video_codec_tag_string'] || 'avc1';
-    const audio_codec = fileinfo['audio_codec_name'] || 'aac' ;
-    const audio_codec_tag = fileinfo['audio_codec_tag_string'] || 'mp4a' ;
+    const video_codec = fileinfo.video['codec_name'] || 'h264';
+    const finalVideoFormat = getFullCodec(fileinfo.video) || video_codec;
+    const audio_codec = fileinfo.audio['codec_name'] || 'aac' ;
+    const audio_max_bit_rate = fileinfo.audio['max_bit_rate'];
+    const finalAudioFormat = getFullCodec(fileinfo.audio) || audixxxo_codec;
 
     const misc_params = '-hide_banner -y';
     
@@ -49,10 +26,11 @@ module.exports = (source, target, fileinfo) => {
     starting_params     += ` -hls_list_size 0`;
     
     let master_playlist= `#EXTM3U\n#EXT-X-VERSION:3\n`;
+    master_playlist += `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="${target}_audio",NAME="English",DEFAULT=YES,URI="${target}/audio.m3u8"\n`;
     
     let cmd = ``;
-    renditions.forEach(element => {
-        let {resolution, bitrate, audiorate} = element;
+    renditions.forEach(rendition => {
+        let {resolution, bitrate, audiorate} = rendition;
     
         const maxrate = +bitrate * max_bitrate_ratio;
         const bufsize = +bitrate *rate_monitor_buffer_ratio;
@@ -65,8 +43,15 @@ module.exports = (source, target, fileinfo) => {
         cmd +=` -hls_segment_filename ${target}/${name}_%03d.ts ${target}/${name}.m3u8`;
     
         // add entry in the master playlist
-        master_playlist += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},AVERAGE-BANDWIDTH=${average_bandwidth},CODECS="${audio_codec},${video_codec}",FRAME-RATE=${frame_rate},RESOLUTION=${resolution}\n${target}/${name}.m3u8\n` 
+        master_playlist += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},AVERAGE-BANDWIDTH=${average_bandwidth},CODECS="${finalVideoFormat},${finalAudioFormat}",FRAME-RATE=${frame_rate},RESOLUTION=${resolution}\n${target}/${name}.m3u8\n` 
     });
+
+    // add audio
+    const audioBitrate = (audio_max_bit_rate / 1000).toFixed(0)
+    const audiocmd = `-c:a aac -b:a ${audioBitrate}k -vn -hls_time ${each_segment_duration} -hls_list_size 0 -hls_segment_filename ${target}/audio%d.aac ${target}/audio.m3u8`;
+    cmd += ` ${audiocmd} `;
+    // add audio entry in the master playlist
+    master_playlist += `#EXT-X-STREAM-INF:BANDWIDTH=${audio_max_bit_rate},AVERAGE-BANDWIDTH=${audio_max_bit_rate / 2},CODECS="${finalAudioFormat}",AUDIO="${target}_audio"\n${target}/audio.m3u8\n`
 
     const finalcmd = `ffmpeg ${misc_params} -i ${source} ${cmd}`;
 
